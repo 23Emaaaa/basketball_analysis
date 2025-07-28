@@ -3,7 +3,7 @@ opencv_python==4.9.0.80
 opencv_python_headless==4.8.0.74
 pandas==2.0.3
 Pillow==11.1.0
-roboflow==1.1.51
+roboflow
 supervision==0.25.1
 torch==2.2.0
 transformers==4.46.3
