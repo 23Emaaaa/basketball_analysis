@@ -8,6 +8,9 @@ from ball_aquisition import BallAquisitionDetector
 from pass_and_interception_detector import PassAndInterceptionDetector
 from tactical_view_converter import TacticalViewConverter
 from speed_and_distance_calculator import SpeedAndDistanceCalculator
+from shot_detector import ShotDetector
+from shot_classifier import ShotClassifier
+from shot_visualizer import ShotVisualizer
 from drawers import (
     PlayerTracksDrawer, 
     BallTracksDrawer,
@@ -47,6 +50,11 @@ def main():
 
     ## Initialize Keypoint Detector
     court_keypoint_detector = CourtKeypointDetector(COURT_KEYPOINT_DETECTOR_PATH)
+
+    # Initialize Shot Modules
+    shot_detector = ShotDetector(basket_area=None) # TODO: Define basket area
+    shot_classifier = ShotClassifier(court_dimensions=None) # TODO: Define court dimensions
+    shot_visualizer = ShotVisualizer()
 
     # Run Detectors
     player_tracks = player_tracker.get_object_tracks(video_frames,
@@ -116,8 +124,21 @@ def main():
     tactical_view_drawer = TacticalViewDrawer()
     speed_and_distance_drawer = SpeedAndDistanceDrawer()
 
+    output_video_frames = video_frames.copy()
+
+    for frame_num, frame in enumerate(output_video_frames):
+        # Shot Detection
+        shot_event = shot_detector.detect(ball_tracks.get(frame_num, []), player_tracks.get(frame_num, []), frame_num)
+        if shot_event:
+            player_in_possession = ball_aquisition.get(frame_num, {}).get('player_id')
+            if player_in_possession:
+                player_position = player_tracks[frame_num][player_in_possession]['bbox']
+                shot_classification = shot_classifier.classify(shot_event, player_position)
+                frame = shot_visualizer.draw_shot(frame, shot_event, player_position)
+
+
     ## Draw object Tracks
-    output_video_frames = player_tracks_drawer.draw(video_frames, 
+    output_video_frames = player_tracks_drawer.draw(output_video_frames, 
                                                     player_tracks,
                                                     player_assignment,
                                                     ball_aquisition)
