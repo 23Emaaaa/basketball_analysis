@@ -8,9 +8,9 @@ from ball_aquisition import BallAquisitionDetector
 from pass_and_interception_detector import PassAndInterceptionDetector
 from tactical_view_converter import TacticalViewConverter
 from speed_and_distance_calculator import SpeedAndDistanceCalculator
-from shot_detector import ShotDetector
-from shot_classifier import ShotClassifier
-from shot_visualizer import ShotVisualizer
+from shot_detector import ShotDetector, shot_detector
+from shot_classifier import ShotClassifier, shot_classifier
+from shot_visualizer import ShotVisualizer, shot_visualizer
 from drawers import (
     PlayerTracksDrawer, 
     BallTracksDrawer,
