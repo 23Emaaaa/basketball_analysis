@@ -16,7 +16,7 @@ def test_player_drawer_on_real_data():
     # Percorsi ai file stub necessari
     PLAYER_TRACKS_STUB = "stubs/player_track_stubs.pkl"
     PLAYER_ASSIGNMENT_STUB = "stubs/player_assignment_stub.pkl"
-    BALL_AQUISITION_STUB = "stubs/ball_aquisition.pkl"
+    BALL_ACQUISITION_STUB = "stubs/ball_acquisition.pkl"
 
     # --- Caricamento Dati ---
 
@@ -29,13 +29,13 @@ def test_player_drawer_on_real_data():
         player_tracks = pickle.load(f)
     with open(PLAYER_ASSIGNMENT_STUB, "rb") as f:
         player_assignments = pickle.load(f)
-    with open(BALL_AQUISITION_STUB, "rb") as f:
-        ball_aquisition = pickle.load(f)
+    with open(BALL_ACQUISITION_STUB, "rb") as f:
+        ball_acquisition = pickle.load(f)
 
     # Estrai i dati solo per il frame che stiamo testando
     player_tracks_for_frame = player_tracks[FRAME_TO_TEST]
     player_assignment_for_frame = player_assignments[FRAME_TO_TEST]
-    player_with_ball_id = ball_aquisition[FRAME_TO_TEST]
+    player_with_ball_id = ball_acquisition[FRAME_TO_TEST]
 
     # --- Esecuzione del Test ---
 

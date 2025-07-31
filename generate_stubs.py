@@ -3,7 +3,7 @@ from utils import read_video, save_stub
 from trackers import PlayerTracker, BallTracker
 from team_assigner import TeamAssigner
 from court_keypoint_detector import CourtKeypointDetector
-from ball_aquisition import BallAquisitionDetector
+from ball_acquisition import BallAcquisitionDetector
 from configs import (
     PLAYER_DETECTOR_PATH,
     BALL_DETECTOR_PATH,
@@ -25,7 +25,7 @@ def generate_all_stubs(video_path):
     ball_tracks_stub_path = os.path.join(stubs_dir, "ball_track_stubs.pkl")
     court_keypoints_stub_path = os.path.join(stubs_dir, "court_key_points_stub.pkl")
     player_assignment_stub_path = os.path.join(stubs_dir, "player_assignment_stub.pkl")
-    ball_aquisition_stub_path = os.path.join(stubs_dir, "ball_aquisition.pkl")
+    ball_acquisition_stub_path = os.path.join(stubs_dir, "ball_acquisition.pkl")
 
     print(f"Inizio la generazione degli stub per il video: {video_path}")
     video_frames = read_video(video_path)
@@ -66,11 +66,11 @@ def generate_all_stubs(video_path):
 
     # 5. Rilevamento Possesso Palla
     print("Passaggio 5/5: Rilevamento del possesso palla...")
-    ball_aquisition_detector = BallAquisitionDetector()
-    ball_aquisition = ball_aquisition_detector.detect_ball_possession(
+    ball_acquisition_detector = BallAcquisitionDetector()
+    ball_acquisition = ball_acquisition_detector.detect_ball_possession(
         player_tracks, ball_tracks
     )
-    save_stub(ball_aquisition_stub_path, ball_aquisition)
+    save_stub(ball_acquisition_stub_path, ball_acquisition)
 
     print(
         "\n✅ Tutti i file stub sono stati rigenerati con successo per il nuovo video!"

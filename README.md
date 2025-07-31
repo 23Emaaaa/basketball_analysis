@@ -149,7 +149,7 @@ docker run \
 - `drawers/`  
   – Contains classes that overlay bounding boxes, court lines, passes, etc., onto frames.
 
-- `ball_aquisition/`  
+- `ball_acquisition/`  
   – Logic for identifying which player is in possession of the ball.
 
 - `pass_and_interception_detector/`  

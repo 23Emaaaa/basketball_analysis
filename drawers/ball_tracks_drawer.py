@@ -1,4 +1,4 @@
-from .utils import draw_traingle
+from .utils import draw_triangle
 
 
 class BallTracksDrawer:
@@ -29,7 +29,7 @@ class BallTracksDrawer:
         # Disegna il puntatore per la palla (di solito ha ID 1)
         for _, ball_data in ball_tracks_for_frame.items():
             if ball_data.get("bbox"):
-                output_frame = draw_traingle(
+                output_frame = draw_triangle(
                     output_frame, ball_data["bbox"], self.ball_pointer_color
                 )
 

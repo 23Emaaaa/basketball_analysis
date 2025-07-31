@@ -1,4 +1,4 @@
-from .utils import draw_ellipse, draw_traingle
+from .utils import draw_ellipse, draw_triangle
 
 
 class PlayerTracksDrawer:
@@ -41,11 +41,11 @@ class PlayerTracksDrawer:
 
             # Se questo giocatore ha la palla, disegna un triangolo sopra di lui
             if track_id == player_with_ball_id:
-                output_frame = draw_traingle(output_frame, player["bbox"], (0, 0, 255))
+                output_frame = draw_triangle(output_frame, player["bbox"], (0, 0, 255))
 
         return output_frame
 
-    def draw(self, video_frames, tracks, player_assignment, ball_aquisition):
+    def draw(self, video_frames, tracks, player_assignment, ball_acquisition):
         """
         Metodo originale che ora utilizza 'draw_frame' in un ciclo.
         Disegna i tracciati su una lista completa di frame.
@@ -55,7 +55,7 @@ class PlayerTracksDrawer:
             # Prendi i dati per il frame corrente
             player_tracks_for_frame = tracks.get(frame_num, {})
             player_assignment_for_frame = player_assignment.get(frame_num, {})
-            player_with_ball_id = ball_aquisition.get(
+            player_with_ball_id = ball_acquisition.get(
                 frame_num, -1
             )  # -1 se nessuno ha la palla
 

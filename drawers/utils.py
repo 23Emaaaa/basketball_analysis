@@ -11,7 +11,7 @@ import sys
 sys.path.append('../')
 from utils import get_center_of_bbox, get_bbox_width, get_foot_position
 
-def draw_traingle(frame,bbox,color):
+def draw_triangle(frame,bbox,color):
     """
     Draws a filled triangle on the given frame at the specified bounding box location.
 
