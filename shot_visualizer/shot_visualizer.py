@@ -4,68 +4,43 @@ from utils.bbox_utils import get_center_of_bbox
 
 class ShotVisualizer:
     def __init__(self):
-        """
-        Inizializza il visualizzatore con i colori per il disegno.
-        """
-        self.trajectory_color = (0, 255, 0)  # Verde per la traiettoria
-        self.success_color = (0, 255, 0)  # Verde per "Bucket!"
-        self.failure_color = (0, 0, 255)  # Rosso per "Miss!"
+        self.trajectory_color = (0, 255, 0)
+        self.success_color = (0, 255, 0)
+        self.failure_color = (0, 0, 255)
 
-    def draw_events(self, frame, shot_event, shot_detector):
+    def draw(self, frame, shot_detector, shot_outcome_text=None):
         """
-        Disegna tutti gli elementi visivi legati al tiro su un singolo frame.
-        Questo metodo funge da punto di ingresso principale per il disegno degli eventi di tiro.
+        Disegna tutti gli elementi visivi: la traiettoria e l'esito persistente del tiro.
 
         Args:
             frame (numpy.ndarray): Il frame video su cui disegnare.
-            shot_event (dict): L'evento di tiro rilevato (inizio/fine).
-            shot_detector (ShotDetector): L'istanza del rilevatore per accedere al suo stato.
-
-        Returns:
-            numpy.ndarray: Il frame con gli elementi visivi disegnati.
+            shot_detector (ShotDetector): L'istanza del rilevatore per disegnare la traiettoria.
+            shot_outcome_text (str, optional): Il testo da disegnare ("Bucket!" o "Miss!"). Defaults to None.
         """
         output_frame = frame.copy()
 
-        # 1. Disegna la traiettoria della palla (solo per debug, quando un tiro è in corso)
+        # 1. Disegna la traiettoria se un tiro è in corso
         if shot_detector.shot_in_progress:
             self._draw_trajectory(output_frame, shot_detector.ball_positions_in_shot)
 
-        # 2. Disegna l'esito del tiro ("Bucket!" o "Miss!") quando il tiro termina
-        if shot_event and shot_event["shot_event"] == "shot_ended":
-            self._draw_shot_outcome(output_frame, shot_event["successful"])
+        # 2. Disegna l'esito del tiro se è fornito
+        if shot_outcome_text:
+            color = (
+                self.success_color
+                if shot_outcome_text == "Bucket!"
+                else self.failure_color
+            )
+            self._draw_shot_outcome(output_frame, shot_outcome_text, color)
 
         return output_frame
 
     def _draw_trajectory(self, frame, trajectory):
-        """
-        Disegna una linea che rappresenta la traiettoria della palla.
-        Funzione interna chiamata da draw_events.
-        """
-        # Disegna una linea che collega i centri delle bbox della palla
         for i in range(len(trajectory) - 1):
-            # Assicurati che le bbox siano valide prima di processarle
             if not trajectory[i] or not trajectory[i + 1]:
                 continue
-
             p1 = get_center_of_bbox(trajectory[i])
             p2 = get_center_of_bbox(trajectory[i + 1])
             cv2.line(frame, p1, p2, self.trajectory_color, 2)
 
-    def _draw_shot_outcome(self, frame, successful):
-        """
-        Scrive "Bucket!" o "Miss!" sul frame.
-        Funzione interna chiamata da draw_events.
-        """
-        text = "Bucket!" if successful else "Miss!"
-        color = self.success_color if successful else self.failure_color
-
-        # Posiziona il testo in un punto ben visibile (es. in alto a sinistra)
-        cv2.putText(
-            frame,
-            text,
-            (150, 80),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            2,  # Dimensione del font
-            color,
-            3,  # Spessore del font
-        )
+    def _draw_shot_outcome(self, frame, text, color):
+        cv2.putText(frame, text, (150, 80), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 3)
