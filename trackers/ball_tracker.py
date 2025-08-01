@@ -1,140 +1,89 @@
-from ultralytics import YOLO
-import supervision as sv
-import numpy as np
 import pandas as pd
-import sys 
-sys.path.append('../')
-from utils import read_stub, save_stub
+from ultralytics import YOLO
+from utils.bbox_utils import get_center_of_bbox
+from utils.kalman_filter import KalmanFilter
 
 
 class BallTracker:
-    """
-    A class that handles basketball detection and tracking using YOLO.
-
-    This class provides methods to detect the ball in video frames, process detections
-    in batches, and refine tracking results through filtering and interpolation.
-    """
     def __init__(self, model_path):
-        self.model = YOLO(model_path) 
+        self.model = YOLO(model_path)
+        self.kalman_filter = KalmanFilter()
+        self.filter_initialized = False
 
-    def detect_frames(self, frames):
+    def track_frames(self, frames):
         """
-        Detect the ball in a sequence of frames using batch processing.
-
-        Args:
-            frames (list): List of video frames to process.
-
-        Returns:
-            list: YOLO detection results for each frame.
+        Metodo principale che rileva la palla e applica il filtro di Kalman
+        per ottenere una traiettoria pulita e completa.
         """
-        batch_size=20 
-        detections = [] 
-        for i in range(0,len(frames),batch_size):
-            detections_batch = self.model.predict(frames[i:i+batch_size],conf=0.5)
-            detections += detections_batch
-        return detections
+        raw_detections = self._detect_frames_raw(frames)
+        return self._get_kalman_filtered_tracks(raw_detections)
 
-    def get_object_tracks(self, frames, read_from_stub=False, stub_path=None):
-        """
-        Get ball tracking results for a sequence of frames with optional caching.
+    def _get_kalman_filtered_tracks(self, detections):
+        tracks = []
 
-        Args:
-            frames (list): List of video frames to process.
-            read_from_stub (bool): Whether to attempt reading cached results.
-            stub_path (str): Path to the cache file.
+        for frame_num, detection_bbox in enumerate(detections):
+            frame_tracks = {}
+            predicted_position = self.kalman_filter.predict()
 
-        Returns:
-            list: List of dictionaries containing ball tracking information for each frame.
-        """
-        tracks = read_stub(read_from_stub,stub_path)
-        if tracks is not None:
-            if len(tracks) == len(frames):
-                return tracks
+            if detection_bbox:  # Se il detector ha trovato la palla
+                center_point = get_center_of_bbox(detection_bbox)
 
-        detections = self.detect_frames(frames)
+                if not self.filter_initialized:
+                    self.kalman_filter.initialize_state(center_point)
+                    self.filter_initialized = True
 
-        tracks=[]
+                corrected_position = self.kalman_filter.correct(center_point)
+                corrected_bbox = self._create_bbox_from_center(
+                    corrected_position, detection_bbox
+                )
+                frame_tracks[1] = {"bbox": corrected_bbox}
 
-        for frame_num, detection in enumerate(detections):
-            cls_names = detection.names
-            cls_names_inv = {v:k for k,v in cls_names.items()}
+            elif self.filter_initialized:
+                predicted_bbox = self._create_bbox_from_center(predicted_position)
+                frame_tracks[1] = {"bbox": predicted_bbox}
 
-            # Covert to supervision Detection format
-            detection_supervision = sv.Detections.from_ultralytics(detection)
+            tracks.append(frame_tracks)
 
-            tracks.append({})
-            chosen_bbox =None
-            max_confidence = 0
-            
-            for frame_detection in detection_supervision:
-                bbox = frame_detection[0].tolist()
-                cls_id = frame_detection[3]
-                confidence = frame_detection[2]
-                
-                if cls_id == cls_names_inv['Ball']:
-                    if max_confidence<confidence:
-                        chosen_bbox = bbox
-                        max_confidence = confidence
-
-            if chosen_bbox is not None:
-                tracks[frame_num][1] = {"bbox":chosen_bbox}
-
-        save_stub(stub_path,tracks)
-        
         return tracks
 
-    def remove_wrong_detections(self,ball_positions):
+    def _create_bbox_from_center(self, center, reference_bbox=None):
+        width = reference_bbox[2] - reference_bbox[0] if reference_bbox else 20
+        height = reference_bbox[3] - reference_bbox[1] if reference_bbox else 20
+        x1 = center[0] - width / 2
+        y1 = center[1] - height / 2
+        x2 = center[0] + width / 2
+        y2 = center[1] + height / 2
+        return [x1, y1, x2, y2]
+
+    def _detect_frames_raw(self, frames):
         """
-        Filter out incorrect ball detections based on maximum allowed movement distance.
-
-        Args:
-            ball_positions (list): List of detected ball positions across frames.
-
-        Returns:
-            list: Filtered ball positions with incorrect detections removed.
+        Esegue il rilevamento YOLO e restituisce solo il BBox della palla con la confidenza più alta per ogni frame.
         """
-        
-        maximum_allowed_distance = 25
-        last_good_frame_index = -1
+        batch_size = 20
+        raw_detections = []
+        for i in range(0, len(frames), batch_size):
+            detections_batch = self.model.predict(frames[i : i + batch_size], conf=0.2)
+            for detection in detections_batch:
+                ball_bbox = None
+                max_confidence = 0
 
-        for i in range(len(ball_positions)):
-            current_box = ball_positions[i].get(1, {}).get('bbox', [])
+                # Cerca dinamicamente l'ID della classe "Ball"
+                try:
+                    ball_class_id = [
+                        k for k, v in detection.names.items() if v == "Ball"
+                    ][0]
+                except IndexError:
+                    # Se il modello non ha la classe 'Ball', non possiamo fare nulla
+                    raw_detections.append(ball_bbox)
+                    continue
 
-            if len(current_box) == 0:
-                continue
+                for box in detection.boxes:
+                    class_id = int(box.cls[0])
+                    confidence = float(box.conf[0])
+                    if class_id == ball_class_id:
+                        if confidence > max_confidence:
+                            ball_bbox = box.xyxy[0].tolist()
+                            max_confidence = confidence
 
-            if last_good_frame_index == -1:
-                # First valid detection
-                last_good_frame_index = i
-                continue
-
-            last_good_box = ball_positions[last_good_frame_index].get(1, {}).get('bbox', [])
-            frame_gap = i - last_good_frame_index
-            adjusted_max_distance = maximum_allowed_distance * frame_gap
-
-            if np.linalg.norm(np.array(last_good_box[:2]) - np.array(current_box[:2])) > adjusted_max_distance:
-                ball_positions[i] = {}
-            else:
-                last_good_frame_index = i
-
-        return ball_positions
-
-    def interpolate_ball_positions(self,ball_positions):
-        """
-        Interpolate missing ball positions to create smooth tracking results.
-
-        Args:
-            ball_positions (list): List of ball positions with potential gaps.
-
-        Returns:
-            list: List of ball positions with interpolated values filling the gaps.
-        """
-        ball_positions = [x.get(1,{}).get('bbox',[]) for x in ball_positions]
-        df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
-
-        # Interpolate missing values
-        df_ball_positions = df_ball_positions.interpolate()
-        df_ball_positions = df_ball_positions.bfill()
-
-        ball_positions = [{1: {"bbox":x}} for x in df_ball_positions.to_numpy().tolist()]
-        return ball_positions
+                raw_detections.append(ball_bbox)
+        return raw_detections
