@@ -94,7 +94,10 @@ def main(input_video_path, output_video_path, read_stubs=False):
         if basket_2d_coords is not None:
             shot_detector.basket_area = basket_2d_coords[0]
         shot_event = shot_detector.detect(
-            ball_tracks_for_frame, player_tracks_for_frame, frame_num
+            ball_tracks_for_frame,
+            player_tracks_for_frame,
+            player_with_ball_id,
+            frame_num,
         )
         if shot_event and shot_event["shot_event"] == "shot_ended":
             shot_outcome_info["text"] = (
