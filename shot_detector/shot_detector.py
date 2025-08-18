@@ -19,6 +19,8 @@ class ShotDetector:
         self.shot_start_frame = 0
         self.ball_positions_in_shot = []
         self.last_ball_pos = None
+        self.player_in_action = None  # Chi ha tirato?
+        self.shot_start_position = None  # Da dove?
 
     def detect(
         self,
@@ -34,6 +36,10 @@ class ShotDetector:
             self.last_ball_pos = None
             return None
 
+        # Manteniamo traccia dell'ultimo giocatore in possesso palla
+        if ball_acquisition != -1:
+            self.player_in_action = ball_acquisition
+
         # Rilevamento dell'inizio di un tiro
         if not self.shot_in_progress:
             if self.last_ball_pos is not None:
@@ -45,10 +51,17 @@ class ShotDetector:
                 if (
                     vertical_velocity > self.vertical_velocity_threshold
                     and ball_acquisition == -1
+                    and self.player_in_action is not None
                 ):
                     self.shot_in_progress = True
                     self.shot_start_frame = frame_num
                     self.ball_positions_in_shot = [self.last_ball_pos, ball_pos]
+                    # Memorizziamo la posizione del giocatore al momento del tiro
+                    player_bbox = player_tracks_for_frame.get(
+                        self.player_in_action, {}
+                    ).get("bbox")
+                    if player_bbox:
+                        self.shot_start_position = player_bbox
 
             self.last_ball_pos = ball_pos
             return None
@@ -73,6 +86,8 @@ class ShotDetector:
                     "shot_event": "shot_ended",
                     "frame": frame_num,
                     "successful": successful,
+                    "player_id": self.player_in_action,
+                    "shot_position": self.shot_start_position,
                 }
                 self.ball_positions_in_shot = []
                 self.last_ball_pos = None
