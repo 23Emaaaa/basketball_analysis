@@ -5,8 +5,8 @@ from utils.kalman_filter import KalmanFilter
 
 
 class BallTracker:
-    def __init__(self, model_path):
-        self.model = YOLO(model_path)
+    def __init__(self, model):
+        self.model = model
         self.kalman_filter = KalmanFilter()
         self.filter_initialized = False
 
