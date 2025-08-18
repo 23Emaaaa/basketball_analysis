@@ -35,12 +35,15 @@ class ShotVisualizer:
         return output_frame
 
     def _draw_trajectory(self, frame, trajectory):
+        # La traiettoria è già una lista di punti (x, y), non di bbox.
         for i in range(len(trajectory) - 1):
-            if not trajectory[i] or not trajectory[i + 1]:
-                continue
-            p1 = get_center_of_bbox(trajectory[i])
-            p2 = get_center_of_bbox(trajectory[i + 1])
-            cv2.line(frame, p1, p2, self.trajectory_color, 2)
+            p1 = trajectory[i]
+            p2 = trajectory[i + 1]
+            # Assicuriamoci che i punti siano tuple di interi per cv2.line
+            if p1 and p2:
+                p1_int = (int(p1[0]), int(p1[1]))
+                p2_int = (int(p2[0]), int(p2[1]))
+                cv2.line(frame, p1_int, p2_int, self.trajectory_color, 2)
 
     def _draw_shot_outcome(self, frame, text, color):
         cv2.putText(frame, text, (150, 80), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 3)
