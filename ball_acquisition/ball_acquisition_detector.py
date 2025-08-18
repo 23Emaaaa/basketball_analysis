@@ -16,7 +16,7 @@ class BallAcquisitionDetector:
 
     def __init__(self):
         """
-        Initialize the BallAquisitionDetector with default thresholds.
+        Initialize the BallAcquisitionDetector with default thresholds.
 
         Attributes:
             possession_threshold (int): Maximum distance (in pixels) at which
