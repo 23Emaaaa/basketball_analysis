@@ -4,11 +4,14 @@ import pandas as pd
 from utils import read_video, save_video, save_stub
 from trackers import PlayerTracker, BallTracker
 
+from ultralytics import YOLO
+
 # ... (altri import come prima)
 from court_keypoint_detector import CourtKeypointDetector
 from team_assigner import TeamAssigner
 from ball_acquisition import BallAcquisitionDetector
 from shot_detector import ShotDetector
+from shot_classifier import ShotClassifier
 from tactical_view import TacticalViewConverter
 from shot_visualizer import ShotVisualizer
 from drawers import (
@@ -54,7 +57,8 @@ def main(input_video_path, output_video_path, read_stubs=False):
     )
 
     # --- Rilevamento della Palla (con il nuovo metodo pulito) ---
-    ball_tracker = BallTracker(BALL_DETECTOR_PATH)
+    ball_model = YOLO(BALL_DETECTOR_PATH)
+    ball_tracker = BallTracker(ball_model)
     # MODIFICA: Chiamiamo il nuovo metodo 'track_frames' se non leggiamo da stub
     if read_stubs:
         with open(os.path.join(stubs_dir, "ball_track_stubs.pkl"), "rb") as f:
@@ -77,6 +81,7 @@ def main(input_video_path, output_video_path, read_stubs=False):
     ball_drawer = BallTracksDrawer()
     court_drawer = CourtKeypointDrawer()
     shot_detector = ShotDetector(basket_area=None)
+    shot_classifier = ShotClassifier(court_dimensions=None)  # Per ora non passiamo le dimensioni reali
     shot_visualizer = ShotVisualizer()
     tactical_converter = TacticalViewConverter()
     shot_outcome_info = {"text": "", "display_frames": 0}
@@ -99,11 +104,19 @@ def main(input_video_path, output_video_path, read_stubs=False):
             player_with_ball_id,
             frame_num,
         )
-        if shot_event and shot_event["shot_event"] == "shot_ended":
-            shot_outcome_info["text"] = (
-                "Bucket!" if shot_event["successful"] else "Miss!"
-            )
-            shot_outcome_info["display_frames"] = 60
+        if shot_event and shot_event.get("shot_event") == "shot_ended":
+            # Classifichiamo il tiro solo se è andato a segno
+            shot_type = ""
+            if shot_event.get("successful") and shot_event.get("shot_position"):
+                classification = shot_classifier.classify(
+                    shot_event, shot_event["shot_position"]
+                )
+                shot_type = f" ({classification['shot_type']})"
+
+            # Aggiorniamo il testo da visualizzare
+            outcome = "Bucket!" if shot_event.get("successful") else "Miss!"
+            shot_outcome_info["text"] = f"{outcome}{shot_type}"
+            shot_outcome_info["display_frames"] = 60  # Mostra il testo per 2 secondi (a 30fps)
         annotated_frame = frame.copy()
         annotated_frame = court_drawer.draw_frame(
             annotated_frame, court_keypoints_for_frame
